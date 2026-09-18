@@ -386,7 +386,8 @@ public:
     // Telegram + optional durable NotificationWorker
     if (config_.enableTelegram && secure_.telegram.valid()) {
       telegram_ = std::make_unique<TelegramClient>(secure_.telegram);
-      dispatcher_ = std::make_unique<TelegramDispatcher>(secure_.telegram);
+      dispatcher_ = std::make_unique<TelegramDispatcher>(
+          secure_.telegram, secure_.telegram.extraChatIds);
       outbox_worker_ = std::make_unique<OutboxWorker>(outbox_,
           [this](const OutboxItem& item) {
             if (!telegram_) return false;
