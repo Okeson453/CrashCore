@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
 import { ConnectionBadge } from "@/components/system-status/ConnectionBadge";
+import { CrashCoreLogo } from "@/components/common/CrashCoreLogo";
+import { PWAInstallButton } from "@/components/pwa/PWAInstallButton";
 import { useStatisticsStore } from "@/stores/statistics-store";
 import { useEffect, useState } from "react";
 import { connectStatisticsStream } from "@/data/websocket/statistics-stream";
@@ -37,6 +39,7 @@ const TOP_RIGHT_NAV = [
 ];
 
 const ALL_NAV = [...PRIMARY_NAV, ...TOP_RIGHT_NAV];
+
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -122,35 +125,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Top Telemetry Header */}
       <header className="sticky top-0 z-40 border-b border-surface-border bg-surface-panel/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-2.5 px-4 pt-3 pb-2">
-          {/* Top Bar: Brand on Left, Regimes + Data Explorer + Connection on Right */}
+          {/* Top Bar: Brand on Left, Regimes + Data Explorer + Install + Connection on Right */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             {/* Logo & Brand */}
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-accent-cyan/10 border border-accent-cyan/30 text-accent-cyan shadow-sm">
-                <Radio className="h-4 w-4 animate-pulse" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-bold tracking-[0.18em] text-ink font-mono">
-                    CRASH<span className="text-accent-cyan">CORE</span>
-                  </span>
-                  <span className="rounded border border-surface-border bg-surface-raised px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest text-ink-dim">
-                    C++ ENGINE OBSERVATORY
-                  </span>
-                  <span className="hidden sm:inline-flex rounded border border-emerald-950/50 bg-accent-emerald/10 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-accent-emerald">
-                    ACIE ACTIVE
-                  </span>
-                </div>
-                <div className="text-[10px] text-ink-dim font-mono tracking-tight hidden md:block">
-                  TELEMETRY & ANALYTICS INTERFACE • ZERO-COPY INGESTION
-                </div>
+              <Link href="/" className="group flex items-center transition-opacity hover:opacity-90">
+                <CrashCoreLogo size="md" />
+              </Link>
+              <div className="hidden sm:flex items-center gap-1.5 ml-1">
+                <span className="rounded border border-surface-border bg-surface-raised px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-widest text-ink-dim">
+                  ENGINE v2.4
+                </span>
+                <span className="inline-flex items-center gap-1 rounded border border-emerald-950/50 bg-accent-emerald/10 px-1.5 py-0.5 text-[9px] font-mono uppercase tracking-wider text-accent-emerald">
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent-emerald animate-ping" />
+                  ACIE ACTIVE
+                </span>
               </div>
             </div>
 
-            {/* Right Top Side: Regimes & Data Explorer menus + Connection Badge */}
-            <div className="flex items-center flex-wrap gap-2.5">
-              {/* Elevated Top-Right Menus */}
-              <div className="flex items-center gap-1.5 rounded-lg border border-surface-border bg-surface-raised/80 p-1 shadow-sm">
+            {/* Right Top Side: Regimes & Data Explorer menus + Install Button + Connection Badge */}
+            <div className="flex items-center flex-wrap gap-2 sm:gap-2.5 ml-auto">
+              {/* Elevated Top-Right Menus: Regimes & Data Explorer */}
+              <div className="flex items-center gap-1 rounded-lg border border-surface-border bg-surface-raised/80 p-1 shadow-sm">
                 {TOP_RIGHT_NAV.map((item) => {
                   const active = pathname.startsWith(item.href);
                   const Icon = item.icon;
@@ -186,6 +182,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   );
                 })}
               </div>
+
+              {/* Mobile / PWA In-App Install Prompt */}
+              <PWAInstallButton />
 
               {/* Connection & Live Controls */}
               <ConnectionBadge
