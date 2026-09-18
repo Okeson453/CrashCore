@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const BACKEND = process.env.CRASHCORE_API_URL || "http://127.0.0.1:8080";
 
 /** Read-only proxy: only GET/OPTIONS forwarded to CrashCore StatisticsServer. */

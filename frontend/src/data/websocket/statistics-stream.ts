@@ -79,15 +79,15 @@ export function connectStatisticsStream(handlers: StreamHandlers): () => void {
       return;
     }
 
-    const proto = typeof window !== "undefined" && window.location.protocol === "https:" ? "wss" : "ws";
-    const host = typeof window !== "undefined" ? window.location.host : "127.0.0.1:3000";
-    // Prefer backend direct if exposed; otherwise same-origin (proxy may not upgrade WS)
-    const url =
-      process.env.NEXT_PUBLIC_STATS_WS_URL ||
-      `${proto}://${host}/api/statistics/stream`;
+    const wsUrl = process.env.NEXT_PUBLIC_STATS_WS_URL;
+    if (!wsUrl) {
+      // No dedicated WebSocket URL configured; use robust HTTP polling
+      startHttpPoll();
+      return;
+    }
 
     try {
-      ws = new WebSocket(url);
+      ws = new WebSocket(wsUrl);
     } catch {
       startHttpPoll();
       return;

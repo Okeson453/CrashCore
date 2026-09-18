@@ -23,15 +23,20 @@ import {
   Terminal,
 } from "lucide-react";
 
-const NAV = [
+const PRIMARY_NAV = [
   { href: "/", label: "Overview", icon: LayoutDashboard, key: "1" },
   { href: "/predictions", label: "Predictions", icon: TrendingUp, key: "2" },
   { href: "/performance", label: "Performance", icon: LineChart, key: "3" },
   { href: "/models", label: "Models", icon: Cpu, key: "4" },
-  { href: "/regimes", label: "Regimes", icon: Layers, key: "5" },
-  { href: "/latency", label: "Latency", icon: Zap, key: "6" },
+  { href: "/latency", label: "Latency", icon: Zap, key: "5" },
+];
+
+const TOP_RIGHT_NAV = [
+  { href: "/regimes", label: "Regimes", icon: Layers, key: "6" },
   { href: "/data", label: "Data Explorer", icon: Database, key: "7" },
 ];
+
+const ALL_NAV = [...PRIMARY_NAV, ...TOP_RIGHT_NAV];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -101,9 +106,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         queryClient.invalidateQueries();
       } else if (e.key >= "1" && e.key <= "7") {
         const index = parseInt(e.key, 10) - 1;
-        if (NAV[index]) {
+        if (ALL_NAV[index]) {
           e.preventDefault();
-          router.push(NAV[index].href);
+          router.push(ALL_NAV[index].href);
         }
       }
     };
@@ -117,6 +122,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Top Telemetry Header */}
       <header className="sticky top-0 z-40 border-b border-surface-border bg-surface-panel/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-2.5 px-4 pt-3 pb-2">
+          {/* Top Bar: Brand on Left, Regimes + Data Explorer + Connection on Right */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             {/* Logo & Brand */}
             <div className="flex items-center gap-3">
@@ -141,19 +147,60 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
 
-            {/* Connection & Live Controls */}
-            <ConnectionBadge
-              state={connection}
-              lastUpdate={lastUpdate}
-              sequence={sequence}
-              dataAgeMs={dataAgeMs}
-            />
+            {/* Right Top Side: Regimes & Data Explorer menus + Connection Badge */}
+            <div className="flex items-center flex-wrap gap-2.5">
+              {/* Elevated Top-Right Menus */}
+              <div className="flex items-center gap-1.5 rounded-lg border border-surface-border bg-surface-raised/80 p-1 shadow-sm">
+                {TOP_RIGHT_NAV.map((item) => {
+                  const active = pathname.startsWith(item.href);
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={clsx(
+                        "group relative flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-all duration-150 whitespace-nowrap",
+                        active
+                          ? "bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/40 shadow-sm"
+                          : "text-ink-muted hover:bg-surface-subtle hover:text-ink border border-transparent"
+                      )}
+                    >
+                      <Icon
+                        className={clsx(
+                          "h-3.5 w-3.5 transition-colors",
+                          active ? "text-accent-cyan" : "text-ink-subtle group-hover:text-ink-muted"
+                        )}
+                      />
+                      <span>{item.label}</span>
+                      <span
+                        className={clsx(
+                          "hidden sm:inline-block rounded px-1 font-mono text-[9px]",
+                          active
+                            ? "bg-accent-cyan/20 text-accent-cyan"
+                            : "text-ink-dim opacity-40 group-hover:opacity-100"
+                        )}
+                      >
+                        {item.key}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {/* Connection & Live Controls */}
+              <ConnectionBadge
+                state={connection}
+                lastUpdate={lastUpdate}
+                sequence={sequence}
+                dataAgeMs={dataAgeMs}
+              />
+            </div>
           </div>
 
-          {/* Navigation Bar */}
+          {/* Lower Navigation Bar: Primary Telemetry Pipeline */}
           <div className="flex items-center justify-between border-t border-surface-borderSubtle pt-2">
             <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
-              {NAV.map((item) => {
+              {PRIMARY_NAV.map((item) => {
                 const active =
                   item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
                 const Icon = item.icon;
@@ -256,7 +303,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 Navigation
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {NAV.map((n) => (
+                {ALL_NAV.map((n) => (
                   <div
                     key={n.key}
                     className="flex items-center justify-between rounded border border-surface-borderSubtle bg-surface-raised/40 px-2.5 py-1.5"
