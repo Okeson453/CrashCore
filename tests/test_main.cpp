@@ -768,7 +768,10 @@ void test_notification_worker_offline() {
   CHECK(nw.tickOnce() == 0);
 }
 void test_evidence_audit_runs() {
-  auto report = audit::runEvidenceAudit("/home/workdir/CrashCore/CrashCore");
+  // CI runs from repo root; also try common relative layouts
+  auto report = audit::runEvidenceAudit(".");
+  if (report.passed < 5) report = audit::runEvidenceAudit("..");
+  if (report.passed < 5) report = audit::runEvidenceAudit("../..");
   CHECK(report.passed >= 5);
 }
 
