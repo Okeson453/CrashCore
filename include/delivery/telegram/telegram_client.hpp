@@ -33,7 +33,8 @@ public:
 
   bool ready() const noexcept { return creds_.valid(); }
 
-  Result<TelegramResponse> sendMessage(const std::string& text) {
+  Result<TelegramResponse> sendMessage(const std::string& text,
+                                       std::int64_t timeoutMs = -1) {
     if (!creds_.valid()) {
       return Error{ErrorCode::AuthFailed, "telegram credentials missing"};
     }
@@ -46,7 +47,7 @@ public:
     req.body = telegram_api::buildSendMessageBody(creds_.chatId, text);
     req.headers["Content-Type"] = "application/json";
     req.headers["User-Agent"] = "CrashCore/1.0";
-    req.timeout_ms = constants::TELEGRAM_TIMEOUT_MS;
+    req.timeout_ms = timeoutMs > 0 ? timeoutMs : constants::TELEGRAM_TIMEOUT_MS;
 
     auto httpResp = http_->request(req);
     if (!httpResp) {

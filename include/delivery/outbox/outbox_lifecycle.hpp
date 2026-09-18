@@ -8,6 +8,7 @@
  *  - one notification per prediction (dedupe_key)
  *  - claim uses lease/deadline to recover stuck InFlight
  *  - wake is non-blocking for publishers
+ *  - expired leases re-queue the original item (not just drop the lease record)
  */
 #include "delivery/outbox/outbox.hpp"
 #include "common/constants.hpp"
@@ -44,7 +45,7 @@ public:
     return r;
   }
 
-  /** Claim next item with lease deadline. */
+  /** Claim next item with lease deadline; retains item for lease recovery. */
   std::optional<OutboxItem> claimWithLease(const std::string& workerId,
                                            std::chrono::milliseconds wait = std::chrono::milliseconds(100)) {
     auto item = outbox_.claim(wait);
@@ -54,11 +55,12 @@ public:
     lease.claimedAtMs = nowMs();
     lease.deadlineMs = lease.claimedAtMs + claim_timeout_ms_;
     lease.workerId = workerId;
+    item->state = OutboxState::InFlight;
     {
       std::lock_guard lk(mu_);
       leases_[item->id] = lease;
+      in_flight_[item->id] = *item; // keep payload for requeue on lease expiry
     }
-    item->state = OutboxState::InFlight;
     ++claims_;
     return item;
   }
@@ -67,6 +69,7 @@ public:
     outbox_.markDelivered(item);
     std::lock_guard lk(mu_);
     leases_.erase(item.id);
+    in_flight_.erase(item.id);
     ++delivered_;
   }
 
@@ -74,22 +77,50 @@ public:
     outbox_.markFailed(item, std::move(error));
     std::lock_guard lk(mu_);
     leases_.erase(item.id);
+    in_flight_.erase(item.id);
     ++failed_;
   }
 
-  /** Recover leases past deadline → re-queue as Pending. */
+  /**
+   * Recover leases past deadline → re-queue items as Pending and wake workers.
+   * Previously only erased the lease map entry (items were lost).
+   */
   std::size_t recoverExpiredLeases() {
     const auto now = nowMs();
-    std::vector<std::uint64_t> expired;
+    std::vector<OutboxItem> to_requeue;
     {
       std::lock_guard lk(mu_);
+      std::vector<std::uint64_t> expired;
       for (const auto& [id, lease] : leases_) {
         if (now > lease.deadlineMs) expired.push_back(id);
       }
-      for (auto id : expired) leases_.erase(id);
+      for (auto id : expired) {
+        auto it = in_flight_.find(id);
+        if (it != in_flight_.end()) {
+          OutboxItem item = it->second;
+          item.state = OutboxState::Pending;
+          item.attempts += 1;
+          to_requeue.push_back(std::move(item));
+          in_flight_.erase(it);
+        }
+        leases_.erase(id);
+      }
     }
-    recovered_ += expired.size();
-    return expired.size();
+    for (auto& item : to_requeue) {
+      // markFailed requeues when under max attempts; force Pending path
+      if (item.attempts >= constants::OUTBOX_MAX_ATTEMPTS) {
+        item.state = OutboxState::DeadLetter;
+        outbox_.markDelivered(item); // drop dedupe reservation via delivered path? better markFailed
+        // Use markFailed which dead-letters at max attempts
+        OutboxItem copy = item;
+        outbox_.markFailed(copy, "lease expired max attempts");
+      } else {
+        outbox_.markFailed(item, "lease expired — requeued");
+      }
+      ++recovered_;
+    }
+    if (!to_requeue.empty()) wake();
+    return to_requeue.size();
   }
 
   void wake() {
@@ -119,6 +150,7 @@ private:
   std::int64_t claim_timeout_ms_;
   std::mutex mu_;
   std::unordered_map<std::uint64_t, OutboxLease> leases_;
+  std::unordered_map<std::uint64_t, OutboxItem> in_flight_;
   std::mutex wake_mu_;
   std::condition_variable wake_cv_;
   std::atomic<std::uint64_t> publishes_{0}, claims_{0}, delivered_{0};

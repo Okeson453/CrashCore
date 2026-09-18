@@ -2,9 +2,8 @@
 #include "common/constants.hpp"
 /**
  * Native port of BC.Game socket sign (p/t) behaviour from native-sign.ts.
- * Production systems supply signing material via SecretProvider.
- * Full wr_utils JS/WASM sandbox is NOT embedded; use external signer or
- * precomputed key material. Cache + TTL + stale-ok semantics preserved.
+ * Prefer ExternalSignerClient (wr_utils via UDS) when attached; otherwise
+ * HMAC with BC_SIGN_KEY. Cache + TTL + stale-ok semantics preserved.
  */
 #include "ingestion/signing/signature.hpp"
 #include "ingestion/signing/hmac.hpp"
@@ -22,6 +21,9 @@ namespace crashcore {
 class NativeSign {
 public:
   explicit NativeSign(SecretProvider& secrets) : secrets_(secrets) {}
+
+  /** Attach external wr_utils signer (preferred production path). */
+  void setExternalSigner(ExternalSignerClient* ext) { external_ = ext; }
 
   /** Returns cached signature if still fresh; otherwise refreshes. */
   SocketSignature signSocketQuery() {
@@ -62,15 +64,24 @@ public:
   }
 
 private:
-  void setExternalSigner(ExternalSignerClient* ext) { external_ = ext; }
-
   SocketSignature refreshUnlocked(std::int64_t now) {
+    const auto ua = secrets_.get("BC_USER_AGENT").value_or(
+        std::string(constants::DEFAULT_UA));
+
+    // Prefer external wr_utils signer when configured (TestingEngine parity).
+    if (external_) {
+      auto r = external_->sign(ua);
+      if (r && r.value().valid) {
+        auto s = r.value();
+        s.at_ms = now;
+        return s;
+      }
+      // Fall through to local HMAC on external failure.
+    }
+
     SocketSignature s;
     const auto key = secrets_.get("BC_SIGN_KEY");
     if (!key || key->empty()) return s;
-    const auto ua = secrets_.get("BC_USER_AGENT").value_or(
-        std::string(constants::DEFAULT_UA));
-    // Deterministic sign material aligned with protocol needs
     const std::string material = std::to_string(now) + "|" + ua + "|" + randomHex(8);
     s.t = std::to_string(now);
     s.p = hmacSha256Hex(*key, material);

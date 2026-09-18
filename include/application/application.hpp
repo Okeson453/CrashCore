@@ -509,13 +509,8 @@ public:
   }
 
   void drainQueues() {
-    if (pipeline_) {
-      pipeline_->drain();
-      return;
-    }
-    while (auto ev = router_.popPrediction()) {
-      prediction_.submit(makePredictionRequest(*ev));
-    }
+    // Canonical TestingEngine path: End(N) → validate N → N1Coordinator observe+predict N+1.
+    // N1Coordinator is the single authority when present; PipelineLoop must not also submit.
     while (auto ev = router_.popValidation()) {
       history_.pushFromEvent(*ev);
       live_validator_.onGameEnd(*ev);
@@ -523,6 +518,17 @@ public:
         (void)n1_->onRoundEnd(*ev);
         globalStats().noteRound();
       }
+    }
+    while (auto ev = router_.popPrediction()) {
+      // Prediction queue now carries End events for N+1. If N1 already handled via
+      // validation path, skip duplicate submit. Standalone/tests without n1_ still submit.
+      if (!n1_) {
+        prediction_.submit(makePredictionRequest(*ev));
+      }
+      (void)ev;
+    }
+    if (pipeline_) {
+      pipeline_->attempts().expireTimeouts();
     }
     attempts_.expireTimeouts();
     live_validator_.expireStale();

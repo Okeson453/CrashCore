@@ -120,16 +120,21 @@ public:
   }
 
   void drain() {
-    while (auto ev = router_.popPrediction()) {
-      auto req = makePredictionRequest(*ev);
-      attempts_.begin(req);
-      // Also submit for stub client path
-      pred_.submit(req);
-      metrics_.inc(Metrics::PredictionsSubmitted);
-    }
-    while (auto ev = router_.popValidation()) {
-      auto result = validator_.onGameEnd(*ev);
-      (void)result;
+    // When Application owns handlers (ownsHandlers_ == false), it is the sole
+    // N+1 authority via N1Coordinator — do not submit predictions here.
+    if (ownsHandlers_) {
+      while (auto ev = router_.popPrediction()) {
+        // Expect End events only (EventRouter N+1 boundary).
+        if (ev->kind != EventKind::End) continue;
+        auto req = makePredictionRequest(*ev);
+        attempts_.begin(req);
+        pred_.submit(req);
+        metrics_.inc(Metrics::PredictionsSubmitted);
+      }
+      while (auto ev = router_.popValidation()) {
+        auto result = validator_.onGameEnd(*ev);
+        (void)result;
+      }
     }
     attempts_.expireTimeouts();
     validator_.expireStale();

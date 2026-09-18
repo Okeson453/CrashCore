@@ -48,17 +48,15 @@ public:
     DurablePersistResult out;
     const auto now = nowMs();
 
-    // Always try memory handoff for low-latency wake
-    if (handoff_) {
-      auto pub = handoff_->publishPrediction(sig);
-      out.memoryPublished = static_cast<bool>(pub);
-    } else if (memory_) {
-      auto pub = memory_->publish(sig);
-      out.memoryPublished = static_cast<bool>(pub);
-    }
-
+    // Non-durable mode: memory handoff only (no DB).
     if (!db_ || !repo_) {
-      // Non-durable mode
+      if (handoff_) {
+        auto pub = handoff_->publishPrediction(sig);
+        out.memoryPublished = static_cast<bool>(pub);
+      } else if (memory_) {
+        auto pub = memory_->publish(sig);
+        out.memoryPublished = static_cast<bool>(pub);
+      }
       out.ok = out.memoryPublished;
       out.durable = false;
       if (!out.ok) out.error = "memory outbox publish failed";
@@ -67,6 +65,14 @@ public:
 
     auto* pg = dynamic_cast<PgDatabase*>(db_);
     if (!pg) {
+      // Prefer durable path only with PgDatabase; fall back to memory without claiming durable.
+      if (handoff_) {
+        auto pub = handoff_->publishPrediction(sig);
+        out.memoryPublished = static_cast<bool>(pub);
+      } else if (memory_) {
+        auto pub = memory_->publish(sig);
+        out.memoryPublished = static_cast<bool>(pub);
+      }
       out.ok = out.memoryPublished;
       out.durable = false;
       out.error = "no PgDatabase for durable path";
@@ -133,7 +139,17 @@ public:
     auto cr = tx.commit();
     if (!cr) {
       out.error = std::string("commit: ") + cr.error().message;
+      // Do NOT publish to handoff — durable contract failed.
       return out;
+    }
+
+    // Wake delivery ONLY after durable commit succeeds (TestingEngine contract).
+    if (handoff_) {
+      auto pub = handoff_->publishPrediction(sig);
+      out.memoryPublished = static_cast<bool>(pub);
+    } else if (memory_) {
+      auto pub = memory_->publish(sig);
+      out.memoryPublished = static_cast<bool>(pub);
     }
 
     out.ok = true;
@@ -144,16 +160,20 @@ public:
 
   DurablePersistResult persistOutcome(const Outcome& o, Signal sig) {
     DurablePersistResult out;
-    if (handoff_) {
-      auto pub = handoff_->publishOutcome(sig);
-      out.memoryPublished = static_cast<bool>(pub);
-    }
     if (!db_) {
+      if (handoff_) {
+        auto pub = handoff_->publishOutcome(sig);
+        out.memoryPublished = static_cast<bool>(pub);
+      }
       out.ok = out.memoryPublished;
       return out;
     }
     auto* pg = dynamic_cast<PgDatabase*>(db_);
     if (!pg) {
+      if (handoff_) {
+        auto pub = handoff_->publishOutcome(sig);
+        out.memoryPublished = static_cast<bool>(pub);
+      }
       out.ok = out.memoryPublished;
       return out;
     }
@@ -168,9 +188,17 @@ public:
          o.isWin ? "true" : "false",
          std::to_string(o.actualMult), std::to_string(o.targetMult),
          std::to_string(nowMs())});
-    out.ok = static_cast<bool>(r) || out.memoryPublished;
-    out.durable = static_cast<bool>(r);
-    if (!r) out.error = r.error().message;
+    if (!r) {
+      out.error = r.error().message;
+      // Do not notify on failed outcome persistence
+      return out;
+    }
+    out.durable = true;
+    if (handoff_) {
+      auto pub = handoff_->publishOutcome(sig);
+      out.memoryPublished = static_cast<bool>(pub);
+    }
+    out.ok = true;
     return out;
   }
 

@@ -60,7 +60,7 @@ public:
     TelegramCredentials c = creds_;
     c.chatId = chatId;
     TelegramClient client(c, http_);
-    auto r = client.sendMessage(text);
+    auto r = client.sendMessage(text, timeoutMs);
     sr.durationMs = MonotonicClock::elapsedUs(t0, MonotonicClock::now()) / 1000;
     if (r) {
       sr.ok = true;
@@ -73,7 +73,6 @@ public:
                   r.error().code == ErrorCode::AuthFailed ? 401 : 0;
       noteFailure(chatId, sr.error);
     }
-    (void)timeoutMs;
     return sr;
   }
 

@@ -64,17 +64,11 @@ public:
     }
 
     bool ok = true;
-    // Progress and Start go to prediction path
-    if (ev.kind == EventKind::Progress || ev.kind == EventKind::Start ||
-        ev.kind == EventKind::Prepare) {
-      if (!to_prediction_.try_push(ev)) {
-        ++drops_pred_;
-        ok = false;
-      } else {
-        ++routed_pred_;
-      }
-    }
-    // End goes to validation
+    // TestingEngine N+1 canonical path:
+    //   ED(N) / End(N) is the prediction boundary for N+1.
+    // Progress / Start / Prepare must NOT enqueue the prediction path —
+    // they update round state only (handled upstream / RoundStateRegistry).
+    // End → validation (settle N) AND prediction (observe N, predict N+1).
     if (ev.kind == EventKind::End) {
       if (!to_validation_.try_push(ev)) {
         ++drops_val_;
@@ -82,10 +76,18 @@ public:
       } else {
         ++routed_val_;
       }
-    }
-    // Everything interesting to persistence (async)
-    if (ev.kind == EventKind::End || ev.kind == EventKind::Start) {
+      // Same End event is the N+1 trigger (observe completed round, predict next).
+      if (!to_prediction_.try_push(ev)) {
+        ++drops_pred_;
+        ok = false;
+      } else {
+        ++routed_pred_;
+      }
       to_persistence_.try_push(ev); // best-effort
+      ++routed_pers_;
+    } else if (ev.kind == EventKind::Start) {
+      // Start is useful for temporal kill / BG(N+1) and persistence, not prediction submit.
+      to_persistence_.try_push(ev);
       ++routed_pers_;
     }
 

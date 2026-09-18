@@ -10,21 +10,27 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <unistd.h>
+#include <sstream>
 
 namespace crashcore {
 
 class LiveSupervisor {
 public:
   struct Config {
-    std::string workerId = "worker-1";
+    std::string workerId;  // empty → auto unique id
     std::string lockKey = "prediction_worker";
     std::int64_t leaseTtlSeconds = 8;
     std::int64_t renewIntervalMs = 3000;
   };
   using AuthorityHandler = std::function<void(bool)>;
 
-  LiveSupervisor(Database* db = nullptr) : db_(db) {}
-  LiveSupervisor(Database* db, Config cfg) : db_(db), cfg_(std::move(cfg)) {}
+  LiveSupervisor(Database* db = nullptr) : db_(db) {
+    ensureWorkerId();
+  }
+  LiveSupervisor(Database* db, Config cfg) : db_(db), cfg_(std::move(cfg)) {
+    ensureWorkerId();
+  }
 
   void setAuthorityHandler(AuthorityHandler h) { on_authority_ = std::move(h); }
 
@@ -46,9 +52,19 @@ public:
         "expires_at_ms=EXCLUDED.expires_at_ms WHERE worker_leases.expires_at_ms < $4 OR worker_leases.owner_id=$2",
         {cfg_.lockKey, cfg_.workerId, std::to_string(expires), std::to_string(now)});
       if (!r) { has_authority_.store(false); return Error{r.error().code, r.error().message}; }
+      // Read back epoch for fencing
+      auto qr = pg->query(
+        "SELECT epoch FROM worker_leases WHERE lock_key=$1 AND owner_id=$2",
+        {cfg_.lockKey, cfg_.workerId});
+      if (qr && !qr.value().rows.empty() && !qr.value().rows[0].empty()) {
+        epoch_.store(static_cast<std::uint64_t>(std::atoll(qr.value().rows[0][0].c_str())));
+      } else {
+        epoch_.fetch_add(1);
+      }
+    } else {
+      epoch_.fetch_add(1);
     }
     has_authority_.store(true);
-    epoch_.fetch_add(1);
     if (on_authority_) on_authority_(true);
     return Result<void>::success();
   }
@@ -58,10 +74,21 @@ public:
     if (!db_) return Result<void>::success();
     auto* pg = dynamic_cast<PgDatabase*>(db_);
     if (pg) {
+      // Fence: renew only if we still own the lease at the current epoch.
       auto r = pg->executeParams(
-        "UPDATE worker_leases SET expires_at_ms=$1 WHERE lock_key=$2 AND owner_id=$3",
-        {std::to_string(nowMs() + cfg_.leaseTtlSeconds * 1000), cfg_.lockKey, cfg_.workerId});
+        "UPDATE worker_leases SET expires_at_ms=$1 WHERE lock_key=$2 AND owner_id=$3 AND epoch=$4",
+        {std::to_string(nowMs() + cfg_.leaseTtlSeconds * 1000), cfg_.lockKey, cfg_.workerId,
+         std::to_string(epoch_.load())});
       if (!r) { loseAuthority(); return Error{r.error().code, r.error().message}; }
+      // Verify ownership still holds
+      auto qr = pg->query(
+        "SELECT owner_id, epoch FROM worker_leases WHERE lock_key=$1",
+        {cfg_.lockKey});
+      if (!qr || qr.value().rows.empty() ||
+          qr.value().rows[0][0] != cfg_.workerId) {
+        loseAuthority();
+        return Error{ErrorCode::AuthFailed, "lease ownership lost"};
+      }
     }
     ++renewals_;
     return Result<void>::success();
@@ -70,8 +97,9 @@ public:
   void release() {
     if (db_) {
       auto* pg = dynamic_cast<PgDatabase*>(db_);
-      if (pg) pg->executeParams("DELETE FROM worker_leases WHERE lock_key=$1 AND owner_id=$2",
-                                {cfg_.lockKey, cfg_.workerId});
+      if (pg) pg->executeParams(
+        "DELETE FROM worker_leases WHERE lock_key=$1 AND owner_id=$2 AND epoch=$3",
+        {cfg_.lockKey, cfg_.workerId, std::to_string(epoch_.load())});
     }
     loseAuthority();
   }
@@ -95,7 +123,18 @@ public:
   std::uint64_t epoch() const noexcept { return epoch_.load(); }
   const std::string& workerId() const noexcept { return cfg_.workerId; }
 
+  /** Guard application mutations: return false if epoch no longer matches. */
+  bool checkEpoch(std::uint64_t expected) const noexcept {
+    return has_authority_.load() && epoch_.load() == expected;
+  }
+
 private:
+  void ensureWorkerId() {
+    if (!cfg_.workerId.empty()) return;
+    std::ostringstream oss;
+    oss << "worker-" << static_cast<long long>(::getpid()) << "-" << nowMs();
+    cfg_.workerId = oss.str();
+  }
   void loseAuthority() {
     if (has_authority_.exchange(false) && on_authority_) on_authority_(false);
   }

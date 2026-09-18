@@ -59,12 +59,20 @@ public:
   bool connected() const noexcept { return connected_.load(); }
 
   Result<SocketSignature> sign(const std::string& userAgent) {
+    // Ensure connected without unlocking a lock_guard (undefined behavior).
+    {
+      std::lock_guard lk(mu_);
+      if (fd_ < 0) {
+        // Drop lock while connecting — connect() takes mu_ itself if needed.
+      }
+    }
+    if (fd_ < 0) {
+      auto cr = connect();
+      if (!cr) return Error{cr.error().code, cr.error().message};
+    }
     std::lock_guard lk(mu_);
     if (fd_ < 0) {
-      mu_.unlock();
-      auto cr = connect();
-      mu_.lock();
-      if (!cr) return Error{cr.error().code, cr.error().message};
+      return Error{ErrorCode::NetworkError, "signer not connected"};
     }
 
     const auto ts = nowMs();
