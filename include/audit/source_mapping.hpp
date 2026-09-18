@@ -63,8 +63,8 @@ inline constexpr std::array<Mapping, 48> kSourceMap{{
   {"src/lib/prediction/live/target-coordinator.ts", "—", "REFERENCE_ONLY", "PE-side"},
   {"src/lib/prediction/live/notification-worker.ts", "include/delivery/outbox/outbox_worker.hpp", "PORT_BEHAVIOR", "implemented"},
   {"src/lib/prediction/live/outbox-wake.ts", "include/delivery/outbox/outbox_lifecycle.hpp", "PORT_BEHAVIOR", "implemented"},
-  {"src/lib/prediction/live/boot.ts", "include/application/application.hpp", "PORT_BEHAVIOR", "partial"},
-  {"src/lib/prediction/live/live-supervisor.ts", "include/orchestration/*", "PORT_BEHAVIOR", "partial"},
+  {"src/lib/prediction/live/boot.ts", "include/live/live_boot.hpp", "PORT_BEHAVIOR", "implemented"},
+  {"src/lib/prediction/live/live-supervisor.ts", "include/live/live_supervisor.hpp", "PORT_BEHAVIOR", "implemented"},
   {"src/lib/observability/event-loop-lag.ts", "include/telemetry/event_loop_lag.hpp", "PORT_BEHAVIOR", "implemented"},
 }};
 
