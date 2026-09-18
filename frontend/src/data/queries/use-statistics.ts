@@ -12,32 +12,78 @@ import {
   fetchRounds,
 } from "@/data/api/statistics";
 import type { RoundsFilter } from "@/types/statistics";
+import { useStatisticsStore } from "@/stores/statistics-store";
 
 export function useOverview() {
-  return useQuery({ queryKey: ["overview"], queryFn: fetchOverview, refetchInterval: 15_000, refetchOnReconnect: true });
+  const interval = useStatisticsStore((s) => s.autoRefreshInterval);
+  return useQuery({
+    queryKey: ["overview"],
+    queryFn: fetchOverview,
+    refetchInterval: interval > 0 ? interval : false,
+    refetchOnReconnect: true,
+  });
 }
+
 export function usePredictions() {
-  return useQuery({ queryKey: ["predictions"], queryFn: fetchPredictions, refetchInterval: 20_000 });
+  const interval = useStatisticsStore((s) => s.autoRefreshInterval);
+  return useQuery({
+    queryKey: ["predictions"],
+    queryFn: fetchPredictions,
+    refetchInterval: interval > 0 ? Math.max(interval, 10_000) : false,
+  });
 }
+
 export function usePerformance() {
-  return useQuery({ queryKey: ["performance"], queryFn: fetchPerformance, refetchInterval: 30_000 });
+  const interval = useStatisticsStore((s) => s.autoRefreshInterval);
+  return useQuery({
+    queryKey: ["performance"],
+    queryFn: fetchPerformance,
+    refetchInterval: interval > 0 ? Math.max(interval, 15_000) : false,
+  });
 }
+
 export function useModels() {
-  return useQuery({ queryKey: ["models"], queryFn: fetchModels, refetchInterval: 30_000 });
+  const interval = useStatisticsStore((s) => s.autoRefreshInterval);
+  return useQuery({
+    queryKey: ["models"],
+    queryFn: fetchModels,
+    refetchInterval: interval > 0 ? Math.max(interval, 15_000) : false,
+  });
 }
+
 export function useRegimes() {
-  return useQuery({ queryKey: ["regimes"], queryFn: fetchRegimes, refetchInterval: 30_000 });
+  const interval = useStatisticsStore((s) => s.autoRefreshInterval);
+  return useQuery({
+    queryKey: ["regimes"],
+    queryFn: fetchRegimes,
+    refetchInterval: interval > 0 ? Math.max(interval, 15_000) : false,
+  });
 }
+
 export function useLatency() {
-  return useQuery({ queryKey: ["latency"], queryFn: fetchLatency, refetchInterval: 10_000 });
+  const interval = useStatisticsStore((s) => s.autoRefreshInterval);
+  return useQuery({
+    queryKey: ["latency"],
+    queryFn: fetchLatency,
+    refetchInterval: interval > 0 ? Math.min(Math.max(interval, 5_000), 15_000) : false,
+  });
 }
+
 export function useHealth() {
-  return useQuery({ queryKey: ["health"], queryFn: fetchHealth, refetchInterval: 5_000 });
+  const interval = useStatisticsStore((s) => s.autoRefreshInterval);
+  return useQuery({
+    queryKey: ["health"],
+    queryFn: fetchHealth,
+    refetchInterval: interval > 0 ? Math.min(Math.max(interval, 3_000), 10_000) : false,
+  });
 }
+
 export function useRounds(filter: RoundsFilter) {
+  const interval = useStatisticsStore((s) => s.autoRefreshInterval);
   return useQuery({
     queryKey: ["rounds", filter],
     queryFn: () => fetchRounds(filter),
-    refetchInterval: 20_000,
+    refetchInterval: interval > 0 ? Math.max(interval, 15_000) : false,
   });
 }
+

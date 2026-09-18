@@ -1,0 +1,6 @@
+{
+  "name": "CrashCore",
+  "description": "CrashCore Statistics Observatory - Real-time metrics, predictive models performance, and latency dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

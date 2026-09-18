@@ -9,9 +9,16 @@ type StatisticsStore = {
   sequence: number;
   dataAgeMs: number;
   overviewPatch: Partial<OverviewStats> | null;
+  lastFlashTimestamp: number;
+  autoRefreshInterval: number; // in ms, 0 = paused
+  soundEnabled: boolean;
+  isManualRefreshing: boolean;
   setConnection: (s: ConnectionState) => void;
   applyUpdate: (u: StatisticsUpdate) => void;
   tickAge: () => void;
+  setAutoRefreshInterval: (interval: number) => void;
+  toggleSound: () => void;
+  setIsManualRefreshing: (b: boolean) => void;
 };
 
 export const useStatisticsStore = create<StatisticsStore>((set, get) => ({
@@ -20,6 +27,10 @@ export const useStatisticsStore = create<StatisticsStore>((set, get) => ({
   sequence: 0,
   dataAgeMs: 0,
   overviewPatch: null,
+  lastFlashTimestamp: 0,
+  autoRefreshInterval: 15000,
+  soundEnabled: false,
+  isManualRefreshing: false,
 
   setConnection: (connection) => set({ connection }),
 
@@ -28,6 +39,7 @@ export const useStatisticsStore = create<StatisticsStore>((set, get) => ({
       lastUpdate: u.timestamp,
       sequence: u.sequence,
       dataAgeMs: 0,
+      lastFlashTimestamp: Date.now(),
       overviewPatch: {
         totalRounds: u.rounds,
         totalPredictions: u.predictions,
@@ -44,4 +56,8 @@ export const useStatisticsStore = create<StatisticsStore>((set, get) => ({
     if (!last) return;
     set({ dataAgeMs: Date.now() - new Date(last).getTime() });
   },
+
+  setAutoRefreshInterval: (autoRefreshInterval) => set({ autoRefreshInterval }),
+  toggleSound: () => set((s) => ({ soundEnabled: !s.soundEnabled })),
+  setIsManualRefreshing: (isManualRefreshing) => set({ isManualRefreshing }),
 }));

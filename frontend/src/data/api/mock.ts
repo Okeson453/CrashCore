@@ -10,6 +10,7 @@ import type {
   RoundsFilter,
   PredictionRow,
   PerformancePoint,
+  ReliabilityBin,
 } from "@/types/statistics";
 
 function seed(n: number) {
@@ -34,8 +35,14 @@ export function mockOverview(): OverviewStats {
     avgConfidence: 0.9418,
     maxLosingStreak: 7,
     currentLosingStreak: 1,
+    maxWinningStreak: 23,
+    currentWinningStreak: 6,
     cumulativePnL: 214.5,
     maxDrawdown: 0.12,
+    sharpeRatio: 2.84,
+    profitFactor: 3.42,
+    activeModels: 7,
+    eventsPerSec: 4.2,
     sequence: 18429,
     updatedAt: new Date().toISOString(),
   };
@@ -43,24 +50,48 @@ export function mockOverview(): OverviewStats {
 
 export function mockPredictions(): PredictionStats {
   const rnd = seed(42);
-  const models = ["Frequency", "ConditionalFrequency", "RegimeAdjusted", "StreakAware", "Bayesian"];
+  const models = [
+    "Frequency",
+    "ConditionalFrequency",
+    "RegimeAdjusted",
+    "StreakAware",
+    "MomentumReversion",
+    "Bayesian",
+    "VolatilityAdjusted",
+  ];
   const regimes = ["High Activity", "Low Activity", "Volatile", "Stable"];
-  const rows: PredictionRow[] = Array.from({ length: 40 }, (_, i) => {
-    const win = rnd() > 0.2;
+  const rows: PredictionRow[] = Array.from({ length: 50 }, (_, i) => {
+    const win = rnd() > 0.1938;
+    const target = Number((1.5 + Math.floor(rnd() * 8) * 0.25).toFixed(2));
+    const crashMultiplier = win
+      ? Number((target + rnd() * 4).toFixed(2))
+      : Number((1.0 + rnd() * (target - 1.01)).toFixed(2));
+    const prob = Number((0.58 + rnd() * 0.38).toFixed(4));
     return {
-      gameId: String(1_000_000 + i),
+      gameId: String(1_580_000 - i),
       timestamp: new Date(Date.now() - i * 45_000).toISOString(),
-      target: 1.5 + Math.floor(rnd() * 8) * 0.25,
-      probability: 0.55 + rnd() * 0.4,
-      confidence: 0.7 + rnd() * 0.29,
-      edge: 0.05 + rnd() * 0.3,
+      target,
+      probability: prob,
+      confidence: Number((0.72 + rnd() * 0.26).toFixed(4)),
+      edge: Number((prob - 0.48).toFixed(4)),
       regime: regimes[Math.floor(rnd() * regimes.length)]!,
       model: models[Math.floor(rnd() * models.length)]!,
-      decision: rnd() > 0.15 ? "Bet" : "Skip",
+      decision: rnd() > 0.12 ? "Bet" : "Skip",
       actualResult: win ? "Win" : "Loss",
-      latencyMs: 8 + rnd() * 40,
+      latencyMs: Number((6.2 + rnd() * 32.5).toFixed(2)),
+      crashMultiplier,
+      brierScore: Number(Math.pow(prob - (win ? 1 : 0), 2).toFixed(4)),
     };
   });
+
+  const reliabilityCurve: ReliabilityBin[] = [
+    { bin: "50-60%", predictedAvg: 0.552, observedRate: 0.548, count: 412 },
+    { bin: "60-70%", predictedAvg: 0.651, observedRate: 0.664, count: 820 },
+    { bin: "70-80%", predictedAvg: 0.753, observedRate: 0.749, count: 1250 },
+    { bin: "80-90%", predictedAvg: 0.849, observedRate: 0.858, count: 1140 },
+    { bin: "90-100%", predictedAvg: 0.938, observedRate: 0.942, count: 609 },
+  ];
+
   return {
     total: 4231,
     valid: 4231,
@@ -74,6 +105,7 @@ export function mockPredictions(): PredictionStats {
     avgConfidence: 0.9418,
     avgEdge: 0.18,
     calibrationError: 0.032,
+    reliabilityCurve,
     rows,
   };
 }
@@ -84,14 +116,17 @@ export function mockPerformance(): PerformanceStats {
   let equity = 100;
   let peak = 100;
   for (let i = 0; i < 120; i++) {
-    const delta = (rnd() - 0.35) * 2.5;
+    const delta = (rnd() - 0.34) * 3.2;
     equity = Math.max(20, equity + delta);
     peak = Math.max(peak, equity);
+    const dd = peak > 0 ? (peak - equity) / peak : 0;
     cumulative.push({
       t: new Date(Date.now() - (120 - i) * 3600_000).toISOString(),
       equity: Number(equity.toFixed(2)),
-      winRate: 0.65 + rnd() * 0.25,
-      drawdown: peak > 0 ? (peak - equity) / peak : 0,
+      winRate: Number((0.68 + rnd() * 0.22).toFixed(4)),
+      drawdown: Number(dd.toFixed(4)),
+      highWaterMark: Number(peak.toFixed(2)),
+      pnlDelta: Number(delta.toFixed(2)),
     });
   }
   return {
@@ -100,66 +135,156 @@ export function mockPerformance(): PerformanceStats {
     losses: 819,
     skips: 11647,
     rollingWinRate: [
-      { window: 25, rate: 0.8 },
-      { window: 50, rate: 0.78 },
-      { window: 100, rate: 0.81 },
+      { window: 25, rate: 0.82 },
+      { window: 50, rate: 0.795 },
+      { window: 100, rate: 0.812 },
       { window: 250, rate: 0.805 },
-      { window: 500, rate: 0.802 },
+      { window: 500, rate: 0.806 },
     ],
-    currentDrawdown: 0.04,
+    currentDrawdown: 0.038,
     maxDrawdown: 0.12,
     recoveryDurationMs: 3_600_000,
-    peakEquity: peak,
-    currentEquity: equity,
+    peakEquity: Number(peak.toFixed(2)),
+    currentEquity: Number(equity.toFixed(2)),
+    sharpeRatio: 2.84,
+    sortinoRatio: 3.91,
+    profitFactor: 3.42,
+    avgWinPnL: 1.82,
+    avgLossPnL: -1.0,
   };
 }
 
 export function mockModels(): ModelStatsRow[] {
-  const names = [
-    "Frequency",
-    "ConditionalFrequency",
-    "RegimeAdjusted",
-    "StreakAware",
-    "MomentumReversion",
-    "Bayesian",
-    "VolatilityAdjusted",
+  const modelsMeta = [
+    {
+      model: "Bayesian",
+      description: "Conjugate prior-posterior Bayesian updater with online Laplace approximation",
+      status: "ACTIVE" as const,
+      latency: 3.2,
+      brier: 0.024,
+    },
+    {
+      model: "ConditionalFrequency",
+      description: "Multi-order lag-conditioned probability transition matrix",
+      status: "ACTIVE" as const,
+      latency: 2.8,
+      brier: 0.029,
+    },
+    {
+      model: "RegimeAdjusted",
+      description: "Clustering-stratified classifier adapting to market activity phase",
+      status: "ACTIVE" as const,
+      latency: 4.1,
+      brier: 0.027,
+    },
+    {
+      model: "StreakAware",
+      description: "Markov streak duration and run-length distribution estimator",
+      status: "ACTIVE" as const,
+      latency: 2.4,
+      brier: 0.033,
+    },
+    {
+      model: "MomentumReversion",
+      description: "Mean-reversion model based on rolling EWMA volatility oscillations",
+      status: "ACTIVE" as const,
+      latency: 3.6,
+      brier: 0.031,
+    },
+    {
+      model: "VolatilityAdjusted",
+      description: "GARCH-inspired volatility scaling with extreme outlier rejection",
+      status: "ACTIVE" as const,
+      latency: 3.9,
+      brier: 0.026,
+    },
+    {
+      model: "Frequency",
+      description: "Unconditional empirical marginal frequency benchmark baseline",
+      status: "ACTIVE" as const,
+      latency: 1.5,
+      brier: 0.045,
+    },
   ];
+
   const rnd = seed(99);
-  return names.map((model) => {
-    const predictions = 300 + Math.floor(rnd() * 600);
-    const wins = Math.floor(predictions * (0.7 + rnd() * 0.15));
+  return modelsMeta.map((m) => {
+    const predictions = 350 + Math.floor(rnd() * 550);
+    const winRate = Number((0.74 + rnd() * 0.12).toFixed(4));
+    const wins = Math.floor(predictions * winRate);
     const losses = predictions - wins;
+    const avgProb = Number((0.76 + rnd() * 0.14).toFixed(4));
+    const avgConf = Number((0.86 + rnd() * 0.11).toFixed(4));
+    const avgEdge = Number((avgProb - 0.48).toFixed(4));
     return {
-      model,
+      model: m.model,
+      description: m.description,
+      status: m.status,
       predictions,
       wins,
       losses,
-      winRate: wins / predictions,
-      avgProbability: 0.75 + rnd() * 0.15,
-      avgConfidence: 0.85 + rnd() * 0.12,
-      avgEdge: 0.1 + rnd() * 0.2,
-      calibrationError: 0.02 + rnd() * 0.04,
-      maxLosingStreak: 3 + Math.floor(rnd() * 6),
-      sampleSize: predictions,
+      winRate: Number((wins / predictions).toFixed(4)),
+      avgProbability: avgProb,
+      avgConfidence: avgConf,
+      avgEdge,
+      calibrationError: Number((0.018 + rnd() * 0.03).toFixed(4)),
+      brierScore: m.brier,
+      avgLatencyMs: m.latency,
+      maxLosingStreak: 3 + Math.floor(rnd() * 4),
+      sampleSize: predictions * 3 + Math.floor(rnd() * 500),
     };
   });
 }
 
 export function mockRegimes(): RegimeStatsRow[] {
-  const regimes = ["High Activity", "Low Activity", "Volatile", "Stable"];
+  const regimesMeta = [
+    {
+      regime: "High Activity",
+      volatilityIndex: 0.88,
+      meanMultiplier: 3.42,
+      preferredModel: "RegimeAdjusted",
+      description: "Elevated transaction density, tight inter-arrival times, rapid round cycling",
+    },
+    {
+      regime: "Stable",
+      volatilityIndex: 0.32,
+      meanMultiplier: 2.15,
+      preferredModel: "Bayesian",
+      description: "Low variance multiplier distribution, balanced mean reversion",
+    },
+    {
+      regime: "Volatile",
+      volatilityIndex: 0.94,
+      meanMultiplier: 4.89,
+      preferredModel: "VolatilityAdjusted",
+      description: "Wide multiplier dispersion with heavy right-tail outliers",
+    },
+    {
+      regime: "Low Activity",
+      volatilityIndex: 0.45,
+      meanMultiplier: 2.38,
+      preferredModel: "StreakAware",
+      description: "Sparse round intervals, clustering in sub-2.00x multiplier bands",
+    },
+  ];
   const rnd = seed(11);
-  return regimes.map((regime) => {
-    const predictions = 400 + Math.floor(rnd() * 800);
-    const wins = Math.floor(predictions * (0.72 + rnd() * 0.12));
+  return regimesMeta.map((rm) => {
+    const predictions = 500 + Math.floor(rnd() * 700);
+    const winRate = Number((0.74 + rnd() * 0.11).toFixed(4));
+    const wins = Math.floor(predictions * winRate);
     return {
-      regime,
-      samples: predictions * 3,
+      regime: rm.regime,
+      volatilityIndex: rm.volatilityIndex,
+      meanMultiplier: rm.meanMultiplier,
+      preferredModel: rm.preferredModel,
+      description: rm.description,
+      samples: predictions * 3 + Math.floor(rnd() * 800),
       predictions,
       wins,
       losses: predictions - wins,
-      winRate: wins / predictions,
-      avgProbability: 0.78 + rnd() * 0.12,
-      avgConfidence: 0.88 + rnd() * 0.1,
+      winRate: Number((wins / predictions).toFixed(4)),
+      avgProbability: Number((0.78 + rnd() * 0.11).toFixed(4)),
+      avgConfidence: Number((0.89 + rnd() * 0.08).toFixed(4)),
     };
   });
 }

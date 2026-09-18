@@ -8,15 +8,49 @@
 
 html,
 body {
-  background: #0a0b0d;
-  color: #e8eaef;
+  background: #090a0f;
+  color: #f1f5f9;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
 }
 
 * {
   box-sizing: border-box;
 }
 
-/* Tabular numbers for dense stats */
+/* Custom telemetry scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090a0f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #222a3a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #333d52;
+}
+
+/* Tabular numbers for high-precision stats */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* Micro border divider utility */
+.telemetry-divider {
+  border-color: #181f2c;
+}
+
+/* Subtle glow for live badge */
+.live-pulse-dot {
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
+}
+

@@ -15,8 +15,14 @@ export interface OverviewStats {
   avgConfidence: number;
   maxLosingStreak: number;
   currentLosingStreak: number;
+  maxWinningStreak?: number;
+  currentWinningStreak?: number;
   cumulativePnL: number;
   maxDrawdown: number;
+  sharpeRatio?: number;
+  profitFactor?: number;
+  activeModels?: number;
+  eventsPerSec?: number;
   sequence: number;
   updatedAt: string;
 }
@@ -33,6 +39,15 @@ export interface PredictionRow {
   decision: "Bet" | "Skip" | "Void";
   actualResult: "Win" | "Loss" | "Skip" | "Void" | "Pending";
   latencyMs: number;
+  crashMultiplier?: number;
+  brierScore?: number;
+}
+
+export interface ReliabilityBin {
+  bin: string;
+  predictedAvg: number;
+  observedRate: number;
+  count: number;
 }
 
 export interface PredictionStats {
@@ -48,6 +63,7 @@ export interface PredictionStats {
   avgConfidence: number;
   avgEdge: number;
   calibrationError: number;
+  reliabilityCurve?: ReliabilityBin[];
   rows: PredictionRow[];
 }
 
@@ -56,6 +72,8 @@ export interface PerformancePoint {
   equity: number;
   winRate: number;
   drawdown: number;
+  pnlDelta?: number;
+  highWaterMark?: number;
 }
 
 export interface PerformanceStats {
@@ -69,6 +87,11 @@ export interface PerformanceStats {
   recoveryDurationMs: number;
   peakEquity: number;
   currentEquity: number;
+  sharpeRatio?: number;
+  sortinoRatio?: number;
+  profitFactor?: number;
+  avgWinPnL?: number;
+  avgLossPnL?: number;
 }
 
 export interface ModelStatsRow {
@@ -83,6 +106,10 @@ export interface ModelStatsRow {
   calibrationError: number;
   maxLosingStreak: number;
   sampleSize: number;
+  brierScore?: number;
+  avgLatencyMs?: number;
+  description?: string;
+  status?: "ACTIVE" | "EVALUATING" | "COOLDOWN";
 }
 
 export interface RegimeStatsRow {
@@ -94,6 +121,10 @@ export interface RegimeStatsRow {
   winRate: number;
   avgProbability: number;
   avgConfidence: number;
+  volatilityIndex?: number;
+  meanMultiplier?: number;
+  preferredModel?: string;
+  description?: string;
 }
 
 export interface LatencyStage {

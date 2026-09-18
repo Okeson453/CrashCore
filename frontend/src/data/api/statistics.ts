@@ -41,7 +41,7 @@ export function getLastApiError(): string | null {
  * - Never pretends mock data is live.
  */
 function demoFallbackAllowed(): boolean {
-  return process.env.NEXT_PUBLIC_ALLOW_DEMO_FALLBACK === "true";
+  return process.env.NEXT_PUBLIC_ALLOW_DEMO_FALLBACK !== "false";
 }
 
 async function getJson<T>(path: string, fallback: T): Promise<T> {
