@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { RoundsTable } from "@/components/tables/RoundsTable";
 import { KpiCard } from "@/components/kpi/KpiCard";
+import { MultiplierTrendChart } from "@/components/charts/MultiplierTrendChart";
 import { useRounds } from "@/data/queries/use-statistics";
 import type { RoundsFilter } from "@/types/statistics";
 import { fmtNum, fmtMult, fmtPct } from "@/lib/formatting/numbers";
@@ -236,6 +237,9 @@ export default function DataPage() {
           </div>
         </form>
       </div>
+
+      {/* Visual Multiplier Trend Chart */}
+      <MultiplierTrendChart rounds={displayedRounds} height={280} />
 
       {/* Rounds Table Container */}
       <div className="space-y-2">
