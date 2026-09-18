@@ -65,15 +65,19 @@ target_link_libraries(CrashCore PRIVATE crashcore_lib)
 
 if(CRASHCORE_BUILD_TESTS)
   enable_testing()
+  # Only sources without their own main() — standalone tests are separate targets
   set(CRASHCORE_TEST_SOURCES
     tests/test_main.cpp
-    tests/integration/end_to_end.cpp
-    tests/integration/pipeline_engine_test.cpp
-    tests/validation/validator_tests.cpp
     tests/phase0_wiring_test.cpp
     tests/phase12_durable_acie_test.cpp
     tests/phase34_feedback_obs_test.cpp
     tests/phase_reverify_test.cpp
+  )
+  # Optional standalone test binaries (each has its own main)
+  set(CRASHCORE_STANDALONE_TESTS
+    tests/integration/end_to_end.cpp
+    tests/integration/pipeline_engine_test.cpp
+    tests/validation/validator_tests.cpp
   )
   # Only add sources that exist
   set(CRASHCORE_TEST_SOURCES_EXISTING "")
@@ -85,6 +89,14 @@ if(CRASHCORE_BUILD_TESTS)
   add_executable(crashcore_tests ${CRASHCORE_TEST_SOURCES_EXISTING})
   target_link_libraries(crashcore_tests PRIVATE crashcore_lib)
   add_test(NAME crashcore_tests COMMAND crashcore_tests)
+  foreach(src ${CRASHCORE_STANDALONE_TESTS})
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${src}")
+      get_filename_component(tname "${src}" NAME_WE)
+      add_executable(crashcore_${tname} ${src})
+      target_link_libraries(crashcore_${tname} PRIVATE crashcore_lib)
+      add_test(NAME crashcore_${tname} COMMAND crashcore_${tname})
+    endif()
+  endforeach()
   if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_production_wiring.cpp")
     add_executable(crashcore_production_wiring tests/test_production_wiring.cpp)
     target_link_libraries(crashcore_production_wiring PRIVATE crashcore_lib)

@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdio>
 /**
  * Source-of-truth audit: TestingEngine → CrashCore classification.
  * Classifications: PORT_DIRECTLY, PORT_BEHAVIOR, PORT_PROTOCOL, PORT_CONTRACT_ONLY,
@@ -71,4 +72,11 @@ inline constexpr std::size_t mappingCount() { return kSourceMap.size(); }
 
 } // namespace crashcore::audit
 
-namespace crashcore { void printSourceAuditSummary(); }
+namespace crashcore {
+inline void printSourceAuditSummary() {
+  std::printf("CrashCore source audit map: %zu entries\n", audit::mappingCount());
+  for (const auto& e : audit::kSourceMap) {
+    std::printf("  [%s] %s -> %s (%s)\n", e.status.data(), e.testingEnginePath.data(), e.crashCorePath.data(), e.classification.data());
+  }
+}
+}
