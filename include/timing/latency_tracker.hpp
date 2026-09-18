@@ -49,11 +49,21 @@ public:
 private:
   static constexpr std::size_t NUM_BUCKETS = 16;
   static std::size_t bucketIndex(std::int64_t us) noexcept {
-    if (us < 10) return 0; if (us < 25) return 1; if (us < 50) return 2;
-    if (us < 100) return 3; if (us < 200) return 4; if (us < 500) return 5;
-    if (us < 1000) return 6; if (us < 2000) return 7; if (us < 5000) return 8;
-    if (us < 10000) return 9; if (us < 25000) return 10; if (us < 50000) return 11;
-    if (us < 100000) return 12; if (us < 250000) return 13; if (us < 1000000) return 14;
+    if (us < 10) return 0;
+    if (us < 25) return 1;
+    if (us < 50) return 2;
+    if (us < 100) return 3;
+    if (us < 200) return 4;
+    if (us < 500) return 5;
+    if (us < 1000) return 6;
+    if (us < 2000) return 7;
+    if (us < 5000) return 8;
+    if (us < 10000) return 9;
+    if (us < 25000) return 10;
+    if (us < 50000) return 11;
+    if (us < 100000) return 12;
+    if (us < 250000) return 13;
+    if (us < 1000000) return 14;
     return 15;
   }
 

@@ -104,13 +104,8 @@ public:
     return Result<void>::success();
   }
 
-  struct QueryResult {
-    std::vector<std::vector<std::string>> rows;
-    std::vector<std::string> columns;
-  };
-
   Result<QueryResult> query(const std::string& sql,
-                            const std::vector<std::string>& params = {}) {
+                            const std::vector<std::string>& params = {}) override {
     std::lock_guard lk(mu_);
     if (!conn_ || PQstatus(conn_) != CONNECTION_OK) {
       return Error{ErrorCode::DatabaseError, "not connected"};

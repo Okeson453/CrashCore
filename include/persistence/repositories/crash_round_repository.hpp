@@ -6,6 +6,8 @@
 #include "common/types.hpp"
 #include <vector>
 #include <mutex>
+#include <cstdlib>
+#include <algorithm>
 
 namespace crashcore {
 
@@ -25,13 +27,41 @@ public:
   }
 
   Result<std::optional<CrashRound>> findById(const GameId& id) override {
-    std::lock_guard lk(mu_);
-    auto it = cache_.find(id);
-    if (it != cache_.end()) return std::optional<CrashRound>(it->second);
+    {
+      std::lock_guard lk(mu_);
+      auto it = cache_.find(id);
+      if (it != cache_.end()) return std::optional<CrashRound>(it->second);
+    }
+    if (db_.connected()) {
+      auto qr = db_.query(SqlBuilder::selectCrashRoundById(id));
+      if (qr && !qr.value().rows.empty()) {
+        auto r = rowToRound(qr.value().rows[0]);
+        if (r) {
+          std::lock_guard lk(mu_);
+          cache_[id] = *r;
+          return r;
+        }
+      }
+    }
     return std::optional<CrashRound>{};
   }
 
   Result<std::vector<CrashRound>> findRecent(std::size_t limit) override {
+    if (db_.connected()) {
+      auto qr = db_.query(SqlBuilder::selectRecentCrashRounds(limit));
+      if (qr) {
+        std::vector<CrashRound> out;
+        for (const auto& row : qr.value().rows) {
+          auto r = rowToRound(row);
+          if (r) {
+            out.push_back(*r);
+            std::lock_guard lk(mu_);
+            cache_[r->gameId] = *r;
+          }
+        }
+        if (!out.empty()) return out;
+      }
+    }
     std::lock_guard lk(mu_);
     std::vector<CrashRound> out;
     out.reserve(std::min(limit, cache_.size()));
@@ -42,22 +72,24 @@ public:
     return out;
   }
 
-  Result<void> upsertFromEvent(const CrashEvent& e) {
-    CrashRound r;
-    r.gameId = e.gameId.empty() ? e.roundId : e.gameId;
-    r.multiplier = e.crashPoint > 0 ? e.crashPoint : e.currentMult;
-    r.hash = e.hash;
-    r.beganAtMs = e.beganAtMs;
-    r.crashedAtMs = e.endedAtMs;
-    r.sequence = e.sequence;
-    r.hasHash = !e.hash.empty();
-    return upsert(r);
-  }
-
   std::uint64_t upsertCount() const noexcept { return upserts_; }
-  std::size_t cacheSize() const { std::lock_guard lk(mu_); return cache_.size(); }
 
 private:
+  static std::optional<CrashRound> rowToRound(const std::vector<std::string>& row) {
+    if (row.size() < 7) return std::nullopt;
+    CrashRound r;
+    r.gameId = row[0];
+    r.multiplier = std::atof(row[1].c_str());
+    r.hash = row[2];
+    r.salt = row[3];
+    r.beganAtMs = std::atoll(row[4].c_str());
+    r.crashedAtMs = std::atoll(row[5].c_str());
+    r.sequence = static_cast<SequenceNum>(std::atoll(row[6].c_str()));
+    r.hasHash = !r.hash.empty();
+    r.hasSalt = !r.salt.empty();
+    return r;
+  }
+
   Database& db_;
   mutable std::mutex mu_;
   std::unordered_map<GameId, CrashRound> cache_;

@@ -80,7 +80,6 @@ public:
     st.updatedAtMs = nowMs();
     st.sequence = ev.sequence;
 
-    const auto newPhase = phaseFromEventKind(ev.kind);
     switch (ev.kind) {
       case EventKind::Prepare:
         st.phase = RoundPhase::Prepare;

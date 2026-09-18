@@ -79,8 +79,7 @@ public:
     // Ordering: end before begin for same id is noted but still accepted (bg_arrived_late recovery)
     if (n.phase == RoundPhase::End) {
       std::lock_guard lk(mu_);
-      auto it = last_phase_.find(n.gameId);
-      // allow
+      // End may arrive before Begin (late recovery path); always record.
       last_phase_[n.gameId] = n.phase;
       last_mult_[n.gameId] = n.multiplier.value_or(0);
     } else if (n.phase == RoundPhase::Begin || n.phase == RoundPhase::Progress) {

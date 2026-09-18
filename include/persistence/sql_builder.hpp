@@ -83,6 +83,41 @@ public:
            std::to_string(id);
   }
 
+
+  static std::string selectPredictionById(const std::string& id) {
+    return "SELECT id, round_id, game_id, decision, confidence, entry_mult, target_mult, "
+           "correlation_id, model_version, created_at_ms FROM predictions WHERE id = " +
+           quote(id) + " LIMIT 1";
+  }
+
+  static std::string selectRecentPredictions(std::size_t limit) {
+    return "SELECT id, round_id, game_id, decision, confidence, entry_mult, target_mult, "
+           "correlation_id, model_version, created_at_ms FROM predictions "
+           "ORDER BY created_at_ms DESC LIMIT " + std::to_string(limit);
+  }
+
+  static std::string selectPredictionsByRound(const std::string& roundId) {
+    return "SELECT id, round_id, game_id, decision, confidence, entry_mult, target_mult, "
+           "correlation_id, model_version, created_at_ms FROM predictions WHERE round_id = " +
+           quote(roundId);
+  }
+
+
+  static std::string selectOutcomeById(const std::string& id) {
+    return "SELECT prediction_id, round_id, result, actual_mult, target_mult, is_win, resolved_at_ms "
+           "FROM outcomes WHERE prediction_id = " + quote(id) + " LIMIT 1";
+  }
+
+  static std::string selectCrashRoundById(const std::string& id) {
+    return "SELECT game_id, multiplier, hash, salt, began_at_ms, crashed_at_ms, sequence "
+           "FROM crash_rounds WHERE game_id = " + quote(id) + " LIMIT 1";
+  }
+
+  static std::string selectRecentCrashRounds(std::size_t limit) {
+    return "SELECT game_id, multiplier, hash, salt, began_at_ms, crashed_at_ms, sequence "
+           "FROM crash_rounds ORDER BY crashed_at_ms DESC LIMIT " + std::to_string(limit);
+  }
+
 private:
   static std::string quote(const std::string& s) {
     std::string out = "'";

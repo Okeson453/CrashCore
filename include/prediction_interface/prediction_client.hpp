@@ -13,6 +13,7 @@
 #include "timing/timestamp.hpp"
 #include "common/result.hpp"
 #include <atomic>
+#include <cstdio>
 #include <functional>
 #include <memory>
 #include <string>
@@ -35,8 +36,17 @@ public:
    * Response arrives via setResponseHandler or pollResponse.
    */
   virtual Result<void> submit(const PredictionRequest& req) {
-    // NON-PRODUCTION stub: always Skip. Production must use InProcessPredictionClient
-    // or a fully wired external client. Detect via modelVersion == "stub".
+    // NON-PRODUCTION stub: always Skip. Production MUST use InProcessPredictionClient
+    // (or a fully wired external client). Detect via modelVersion == "stub".
+    // Emit a one-shot warning so mis-wiring is visible in logs.
+    static std::atomic<bool> warned{false};
+    if (!warned.exchange(true, std::memory_order_relaxed)) {
+      // Avoid pulling logger.hpp into every TU that only needs the interface;
+      // use stderr directly for the hard failure signal.
+      std::fprintf(stderr,
+        "[CrashCore] FATAL-CONFIG: PredictionClient base stub used in production path. "
+        "Wire InProcessPredictionClient via makePredictionClient(true) or Application constructor.\n");
+    }
     PredictionResponse resp;
     resp.predictionId = "stub-" + req.correlationId;
     resp.targetRoundId = req.targetRoundId;
@@ -47,7 +57,10 @@ public:
     resp.correlationId = req.correlationId;
     resp.modelVersion = "stub";
     resp.valid = true;
-    pending_[req.correlationId] = resp;
+    {
+      std::lock_guard lk(mu_);
+      pending_[req.correlationId] = resp;
+    }
     ++submitted_;
     if (handler_) handler_(resp);
     return Result<void>::success();
