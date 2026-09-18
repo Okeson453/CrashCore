@@ -1,60 +1,99 @@
 # CrashCore
 
-C++23 production runtime for BC.Game crash ingestion, prediction-engine interface,
-validation, outbox delivery, and observability.
+C++23 production runtime for BC.Game crash ingestion, prediction, validation,
+durable outbox delivery, and observability — with a Next.js statistics frontend.
 
-**Prediction Engine is intentionally separate (EXCLUDE).**
+Repository: https://github.com/Okeson453/CrashCore
 
-## Production LOC
+## Components
 
-See measured count after build. Target ≥15,000 production LOC.
-
-## TestingEngine source audit (summary)
-
-| Classification | Examples |
-|----------------|----------|
-| PORT_PROTOCOL | native-protocol.ts → socketio_protocol, protocol_edge_cases |
-| PORT_BEHAVIOR | native-socket-client, realtime pipeline, live validator, outbox, telegram format |
-| PORT_CONTRACT | prediction types, prediction-attempt, feedback, target-coordinator |
-| REFERENCE_ONLY | predictor.ts, poll-worker, fetch-bc |
-| EXCLUDE | ACIE, models, features, ensemble, prediction-engine internals |
-
-Full table: `include/audit/source_mapping.hpp` (48 entries).
+| Layer | Role |
+|-------|------|
+| **Ingestion** | Native / Socket.IO client, decoder, realtime pipeline |
+| **Prediction** | In-process PE (`third_party/predictions-engine`) + ACIE strategy gate |
+| **Validation** | Live validator, outcome matching, loss cooldown |
+| **Delivery** | Durable prediction TX, temporal auth, notification worker, Telegram |
+| **Persistence** | PostgreSQL (libpq), migrations, outbox, feedback |
+| **Frontend** | Next.js App Router statistics observatory (`frontend/`) |
 
 ## Architecture
 
 ```
-BC.Game → NativeBcGameSocket → Decoder → RealtimePipeline
-                                         → RoundState → EventRouter
-                                              ↓
-                                    PredictionAttempt (external PE)
-                                              ↓
-                                    LiveValidator → Feedback → Outbox → Telegram
-                                              ↓
-                                         Persistence (async)
+BC.Game → Socket → Decoder → RealtimePipeline → RoundState → EventRouter
+                                      ↓
+                         PredictionClient (InProcess PE)
+                                      ↓
+              register → claim → DurablePredictionTx → Outbox → Telegram
+                                      ↓
+                         Outcome → ExactlyOnceFeedback → AdaptiveEdge
 ```
 
-## Event loop (PipelineLoop / EventEngine)
+## Decision contract
 
-1. Frame classify (ping/pong/open/binary/malformed)
-2. Decode binary → CrashEvent
-3. Realtime normalize + validate
-4. Duplicate filter
-5. Round state machine
-6. Route to prediction / validation / persistence queues
-7. Prediction attempt coordinator (fence + timeout)
-8. onGameEnd → outcomes + loss cooldown
-9. Outbox lifecycle (claim/lease/wake)
-10. Optional Telegram dispatcher + DB batch
+Predictions use a **fair-odds + quality edge** gate (default target **1.30×**), not a
+hardcoded 0.5 probability. Strategy modes: `ENTRY` / `REDUCED_ENTRY` / `SKIP`.
+Adaptive edge updates from realized win/loss outcomes (exactly-once feedback).
 
-## Quick test
+## Build (C++)
+
+**Dependencies:** CMake ≥ 3.20, C++23 compiler, OpenSSL, Boost.System, libpq, libcurl, nlohmann_json.
 
 ```bash
-c++ -std=c++23 -Iinclude tests/test_main.cpp -o crashcore_tests -lssl -lcrypto -pthread
-./crashcore_tests
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+./build/crashcore_tests
+./build/CrashCore
 ```
 
-## Latency (measured)
+GitHub Actions CI builds **Debug** and **Release** and runs the test suite on every push to `main`.
 
-- decode+route ≈ 0.5–0.8 µs/op
-- e2e 1000 rounds ≈ 7–11 µs/round
+## Frontend
+
+```bash
+cd frontend
+npm install
+npm run build
+npm run dev
+```
+
+Environment (optional):
+
+| Variable | Purpose |
+|----------|---------|
+| `CRASHCORE_API_URL` | C++ StatisticsServer origin (default `http://127.0.0.1:8080`) |
+| `NEXT_PUBLIC_ALLOW_DEMO_FALLBACK` | Set `true` to allow mock data when backend is down (off by default) |
+| `NEXT_PUBLIC_STATS_WS_URL` | Optional WebSocket URL for live stats |
+| `NEXT_PUBLIC_FORCE_DEMO` | Force offline/demo mode |
+
+Deploy the `frontend/` directory as the Vercel project root (or set Root Directory to `frontend`).
+
+## Configuration (runtime)
+
+Key `ApplicationConfig` flags:
+
+- `enablePersistence` — require valid DB; connect + migrate hard-fail if misconfigured
+- `enableTelegram` / `enableNotificationWorker` — delivery path
+- `statsPort` — HTTP statistics server (default `8080`)
+- `qualityEdge` / `minConfidence` / `deliveryDeadlineMs` — strategy & temporal policy
+
+Database credentials via `DATABASE_URL` (see `include/security/credentials.hpp`).
+
+## Migrations
+
+SQL under `migrations/` (`0001` … `0050`). Applied by `MigrationRunner` when persistence is enabled.
+
+## Layout
+
+```
+include/     Public headers (application, ingestion, prediction, delivery, …)
+src/         Translation units linked into crashcore_lib / CrashCore
+tests/       Unit, phase, and integration tests
+frontend/    Next.js statistics UI
+migrations/  PostgreSQL schema
+third_party/ predictions-engine (in-process PE)
+.github/     CI workflow
+```
+
+## License
+
+See [LICENSE](LICENSE).

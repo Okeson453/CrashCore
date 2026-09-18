@@ -50,6 +50,7 @@ export function connectStatisticsStream(handlers: StreamHandlers): () => void {
         }
         setConn("LIVE");
         handlers.onUpdate({
+          type: "statistics_update",
           timestamp: data.updatedAt || new Date().toISOString(),
           sequence: data.sequence ?? 0,
           rounds: data.totalRounds ?? 0,
@@ -57,6 +58,7 @@ export function connectStatisticsStream(handlers: StreamHandlers): () => void {
           wins: data.wins ?? 0,
           losses: data.losses ?? 0,
           winRate: data.winRate ?? 0,
+          latencyP95: data.latencyP95 ?? data.p95 ?? 0,
         });
       } catch (e) {
         setConn("DISCONNECTED");
@@ -99,6 +101,7 @@ export function connectStatisticsStream(handlers: StreamHandlers): () => void {
       try {
         const data = JSON.parse(String(ev.data));
         handlers.onUpdate({
+          type: "statistics_update",
           timestamp: data.timestamp || data.updatedAt || new Date().toISOString(),
           sequence: data.sequence ?? 0,
           rounds: data.rounds ?? data.totalRounds ?? 0,
@@ -106,6 +109,7 @@ export function connectStatisticsStream(handlers: StreamHandlers): () => void {
           wins: data.wins ?? 0,
           losses: data.losses ?? 0,
           winRate: data.winRate ?? 0,
+          latencyP95: data.latencyP95 ?? data.p95 ?? 0,
         });
         setConn("LIVE");
       } catch {
