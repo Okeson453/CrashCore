@@ -29,7 +29,8 @@ enum class ErrorCode : int {
   Duplicate,
   ValidationFailed,
   ConfigError,
-  ResourceExhausted
+  ResourceExhausted,
+  IoError
 };
 
 inline const char* errorMessage(ErrorCode c) noexcept {
@@ -58,6 +59,7 @@ inline const char* errorMessage(ErrorCode c) noexcept {
     case ErrorCode::ValidationFailed:   return "validation failed";
     case ErrorCode::ConfigError:        return "config error";
     case ErrorCode::ResourceExhausted:  return "resource exhausted";
+    case ErrorCode::IoError:            return "io error";
   }
   return "unknown error";
 }

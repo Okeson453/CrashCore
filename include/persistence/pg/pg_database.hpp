@@ -175,9 +175,4 @@ private:
   std::atomic<std::uint64_t> failures_{0};
 };
 
-inline std::unique_ptr<Database> makeDatabase(DatabaseCredentials creds, bool usePg = true) {
-  if (usePg) return std::make_unique<PgDatabase>(std::move(creds));
-  return std::make_unique<Database>(std::move(creds));
-}
-
 } // namespace crashcore

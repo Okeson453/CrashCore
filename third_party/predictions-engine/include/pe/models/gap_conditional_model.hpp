@@ -146,7 +146,7 @@ inline CandidateEstimate scoreGapConditional(const IncrementalStateEngine& engin
   fv.values["gap_s"] = engine.lastGapS();
   const double lag1 = engine.lagN(1);
   fv.values["log_lag_1"] = lag1 >= 1.0 ? std::log(lag1) : 0.0;
-  fv.meta = {0, 1.0, 0};
+  fv.meta = FeatureVector::Meta{0, 1.0, 0, std::nullopt};
   static GapConditionalModel model; // shared for scoring
   const auto out = model.predict(fv, 1.3, nullptr);
   return {"GapConditionalModel", out.probability};
