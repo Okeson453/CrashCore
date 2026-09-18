@@ -2,11 +2,11 @@
 
 import clsx from "clsx";
 import type { ConnectionState } from "@/types/statistics";
-import { fmtAge } from "@/lib/formatting/numbers";
+import { fmtAge, fmtTime, fmtNum } from "@/lib/formatting/numbers";
 import { useStatisticsStore } from "@/stores/statistics-store";
 import { useQueryClient } from "@tanstack/react-query";
 import { Activity, RefreshCw, Volume2, VolumeX, Clock } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Props = {
   state: ConnectionState;
@@ -23,6 +23,11 @@ export function ConnectionBadge({ state, lastUpdate, sequence, dataAgeMs }: Prop
   const toggleSound = useStatisticsStore((s) => s.toggleSound);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
@@ -33,10 +38,7 @@ export function ConnectionBadge({ state, lastUpdate, sequence, dataAgeMs }: Prop
     }
   };
 
-  const time =
-    lastUpdate != null
-      ? new Date(lastUpdate).toLocaleTimeString(undefined, { hour12: false })
-      : "—";
+  const time = lastUpdate != null ? fmtTime(lastUpdate) : "—";
 
   const isFresh = dataAgeMs != null && dataAgeMs < 10000;
   const isStale = dataAgeMs != null && dataAgeMs >= 30000;
@@ -77,7 +79,7 @@ export function ConnectionBadge({ state, lastUpdate, sequence, dataAgeMs }: Prop
         {sequence != null && (
           <div className="hidden md:flex items-center gap-1 text-[11px] font-mono text-ink-dim">
             <span>SEQ:</span>
-            <span className="text-ink-muted">#{sequence.toLocaleString()}</span>
+            <span className="text-ink-muted">#{fmtNum(sequence)}</span>
           </div>
         )}
 

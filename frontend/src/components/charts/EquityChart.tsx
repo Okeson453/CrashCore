@@ -75,7 +75,7 @@ export function EquityChart({
 }) {
   const points = data.map((d, index) => ({
     rawTime: d.t,
-    timeLabel: index % 15 === 0 ? new Date(d.t).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "",
+    timeLabel: index % 15 === 0 ? fmtDateTime(d.t).split(",")[0] : "",
     equity: d.equity,
     highWaterMark: d.highWaterMark ?? d.equity,
     drawdown: d.drawdown,

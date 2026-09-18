@@ -5,7 +5,7 @@ export function fmtPct(v: number, digits = 2): string {
 
 export function fmtNum(v: number, digits = 0): string {
   if (!Number.isFinite(v)) return "—";
-  return v.toLocaleString(undefined, {
+  return v.toLocaleString("en-US", {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
@@ -14,7 +14,7 @@ export function fmtNum(v: number, digits = 0): string {
 export function fmtSignedNum(v: number, digits = 1): string {
   if (!Number.isFinite(v)) return "—";
   const sign = v > 0 ? "+" : "";
-  return `${sign}${v.toLocaleString(undefined, {
+  return `${sign}${v.toLocaleString("en-US", {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   })}`;
@@ -40,10 +40,16 @@ export function fmtAge(ms: number): string {
   return `${Math.floor(ms / 60_000)}m ${Math.round((ms % 60_000) / 1000)}s`;
 }
 
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 export function fmtTime(iso: string): string {
   try {
     const d = new Date(iso);
-    return isNaN(d.getTime()) ? "—" : d.toLocaleTimeString(undefined, { hour12: false });
+    if (isNaN(d.getTime())) return "—";
+    const h = String(d.getUTCHours()).padStart(2, "0");
+    const m = String(d.getUTCMinutes()).padStart(2, "0");
+    const s = String(d.getUTCSeconds()).padStart(2, "0");
+    return `${h}:${m}:${s} UTC`;
   } catch {
     return "—";
   }
@@ -52,15 +58,15 @@ export function fmtTime(iso: string): string {
 export function fmtDateTime(iso: string): string {
   try {
     const d = new Date(iso);
-    return isNaN(d.getTime()) ? "—" : d.toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    });
+    if (isNaN(d.getTime())) return "—";
+    const mon = MONTH_NAMES[d.getUTCMonth()];
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    const h = String(d.getUTCHours()).padStart(2, "0");
+    const m = String(d.getUTCMinutes()).padStart(2, "0");
+    const s = String(d.getUTCSeconds()).padStart(2, "0");
+    return `${mon} ${day}, ${h}:${m}:${s}`;
   } catch {
     return "—";
   }
 }
+
