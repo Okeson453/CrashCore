@@ -52,6 +52,7 @@
 #include "timing/clock.hpp"
 #include "timing/clock_offset.hpp"
 #include "telemetry/metrics.hpp"
+#include "telemetry/event_loop_lag.hpp"
 #include "telemetry/metric_registry.hpp"
 #include "telemetry/health_aggregator.hpp"
 #include "orchestration/component_registry.hpp"
@@ -588,6 +589,7 @@ public:
     }
     start();
     while (!Lifecycle::instance().shutdownRequested() && running()) {
+      lag_monitor_.tick();
       drainQueues();
       live_validator_.expireStale();
       targets_.expireOlderThan(config_.stuckMaxAgeMs);
@@ -618,6 +620,7 @@ private:
   SecureConfig secure_;
   LatencyTracker latency_;
   Metrics metrics_;
+  EventLoopLagMonitor lag_monitor_{5000}; // 5 ms expected tick
   MetricRegistry metric_reg_;
   EventDecoder decoder_;
   EventRouter router_;

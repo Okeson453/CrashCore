@@ -65,7 +65,7 @@ inline constexpr std::array<Mapping, 48> kSourceMap{{
   {"src/lib/prediction/live/outbox-wake.ts", "include/delivery/outbox/outbox_lifecycle.hpp", "PORT_BEHAVIOR", "implemented"},
   {"src/lib/prediction/live/boot.ts", "include/application/application.hpp", "PORT_BEHAVIOR", "partial"},
   {"src/lib/prediction/live/live-supervisor.ts", "include/orchestration/*", "PORT_BEHAVIOR", "partial"},
-  {"src/lib/observability/event-loop-lag.ts", "include/telemetry/*", "PORT_BEHAVIOR", "partial"},
+  {"src/lib/observability/event-loop-lag.ts", "include/telemetry/event_loop_lag.hpp", "PORT_BEHAVIOR", "implemented"},
 }};
 
 inline constexpr std::size_t mappingCount() { return kSourceMap.size(); }
