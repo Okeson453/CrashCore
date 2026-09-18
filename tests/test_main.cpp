@@ -768,10 +768,25 @@ void test_notification_worker_offline() {
   CHECK(nw.tickOnce() == 0);
 }
 void test_evidence_audit_runs() {
-  // CI runs from repo root; also try common relative layouts
-  auto report = audit::runEvidenceAudit(".");
-  if (report.passed < 5) report = audit::runEvidenceAudit("..");
-  if (report.passed < 5) report = audit::runEvidenceAudit("../..");
+  // Resolve repo root from this source file so cwd does not matter
+  std::string here = __FILE__;
+  auto slash = here.find_last_of("/\\");
+  std::string tests_dir = (slash == std::string::npos) ? "." : here.substr(0, slash);
+  std::string roots[] = {
+    tests_dir + "/..",           // tests/..
+    ".",
+    "..",
+    "../..",
+  };
+  audit::AuditReport report;
+  for (const auto& root : roots) {
+    report = audit::runEvidenceAudit(root);
+    if (report.passed >= 5) break;
+  }
+  if (report.passed < 5) {
+    std::printf("evidence audit best: passed=%d failed=%d\n", report.passed, report.failed);
+    for (const auto& f : report.failures) std::printf("  FAIL: %s\n", f.c_str());
+  }
   CHECK(report.passed >= 5);
 }
 
