@@ -1,0 +1,1 @@
+// microbench component: event_decode_bench\n

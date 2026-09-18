@@ -1,0 +1,1 @@
+// microbench component: outbox_bench\n

@@ -1,0 +1,16 @@
+[ingestion]
+host = "bc.game"
+heartbeat_ms = 25000
+
+[concurrency]
+event_queue_capacity = 2048
+worker_count = 2
+
+[delivery]
+enable_telegram = false
+
+[persistence]
+enabled = false
+
+[logging]
+level = "debug"

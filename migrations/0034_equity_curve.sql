@@ -1,0 +1,9 @@
+
+CREATE TABLE IF NOT EXISTS equity_curve (
+  id BIGSERIAL PRIMARY KEY,
+  ts_ms BIGINT NOT NULL,
+  equity DOUBLE PRECISION NOT NULL,
+  drawdown DOUBLE PRECISION,
+  win_rate DOUBLE PRECISION
+);
+CREATE INDEX IF NOT EXISTS idx_equity_ts ON equity_curve(ts_ms DESC);

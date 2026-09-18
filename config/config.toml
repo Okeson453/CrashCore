@@ -1,0 +1,24 @@
+# CrashCore default configuration
+
+[ingestion]
+host = "bc.game"
+path = "/socket.io/?EIO=3&transport=websocket"
+nsp = "/g/cm"
+heartbeat_ms = 25000
+
+[concurrency]
+event_queue_capacity = 4096
+worker_count = 4
+
+[prediction]
+timeout_ms = 50
+
+[delivery]
+outbox_capacity = 2048
+enable_telegram = true
+
+[persistence]
+enabled = false
+
+[logging]
+level = "info"

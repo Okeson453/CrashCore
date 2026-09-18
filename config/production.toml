@@ -1,0 +1,4 @@
+[app]
+environment = "production"
+enable_telegram = true
+enable_persistence = true
