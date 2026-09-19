@@ -14,6 +14,7 @@
 #include "common/result.hpp"
 #include <atomic>
 #include <cstdio>
+#include <cstdlib>
 #include <functional>
 #include <memory>
 #include <string>
@@ -41,11 +42,16 @@ public:
     // Emit a one-shot warning so mis-wiring is visible in logs.
     static std::atomic<bool> warned{false};
     if (!warned.exchange(true, std::memory_order_relaxed)) {
-      // Avoid pulling logger.hpp into every TU that only needs the interface;
-      // use stderr directly for the hard failure signal.
-      std::fprintf(stderr,
-        "[CrashCore] FATAL-CONFIG: PredictionClient base stub used in production path. "
-        "Wire InProcessPredictionClient via makePredictionClient(true) or Application constructor.\n");
+      // Unit tests intentionally exercise the stub. Production must use
+      // InProcessPredictionClient (Application does). Silence with
+      // CRASHCORE_ALLOW_STUB_CLIENT=1 when needed.
+      const char* allow = std::getenv("CRASHCORE_ALLOW_STUB_CLIENT");
+      if (!(allow && allow[0] == '1')) {
+        std::fprintf(stderr,
+          "[CrashCore] WARN: PredictionClient base stub used. "
+          "Production must wire InProcessPredictionClient via "
+          "makePredictionClient(true) or Application.\n");
+      }
     }
     PredictionResponse resp;
     resp.predictionId = "stub-" + req.correlationId;

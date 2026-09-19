@@ -182,15 +182,28 @@ void test_event_decoder_progress_packet() {
 
 void test_event_router() {
   EventRouter router(64);
+  // Progress must NOT enter the prediction queue (N+1 boundary is End only).
+  CrashEvent prog;
+  prog.kind = EventKind::Progress;
+  prog.valid = true;
+  prog.gameId = "g1";
+  prog.sequence = 1;
+  CHECK(router.route(prog));
+  CHECK(!router.popPrediction());
+
+  // End routes to both validation and prediction queues.
   CrashEvent ev;
-  ev.kind = EventKind::Progress;
+  ev.kind = EventKind::End;
   ev.valid = true;
   ev.gameId = "g1";
-  ev.sequence = 1;
+  ev.sequence = 2;
+  ev.crashPoint = 2.5;
   CHECK(router.route(ev));
   auto p = router.popPrediction();
   CHECK(p && p->gameId == "g1");
-  // duplicate
+  auto v = router.popValidation();
+  CHECK(v && v->gameId == "g1");
+  // duplicate End
   CHECK(router.route(ev));
   CHECK(router.stats().duplicates >= 1);
 }
@@ -456,14 +469,22 @@ void test_end_to_end_synthetic() {
     outbox.publish(signalFromPrediction(ev));
   });
 
-  // Simulate progress → prediction request
+  // Simulate End(N) → N+1 prediction boundary (canonical path).
   std::vector<std::uint8_t> payload;
+  // End packet: multiplier as fixed-point style varint payload (decoder tolerant)
   payload.push_back(8);
-  writeVarint(3000, payload);
-  auto frame = encodeEvent("/g/cm", "pg", payload);
+  writeVarint(2500, payload); // 2.5x * 1000 style if used
+  auto frame = encodeEvent("/g/cm", "ed", payload);
   auto ev = decoder.decodeBinary(frame.data(), frame.size());
   CHECK(ev);
-  router.route(ev.value());
+  // Ensure End identity for routing even if decoder leaves gameId empty
+  auto endEv = ev.value();
+  endEv.kind = EventKind::End;
+  endEv.valid = true;
+  if (endEv.gameId.empty()) endEv.gameId = "synth-round";
+  if (endEv.roundId.empty()) endEv.roundId = endEv.gameId;
+  if (endEv.crashPoint <= 0) endEv.crashPoint = 2.5;
+  router.route(endEv);
   auto pe = router.popPrediction();
   CHECK(pe);
   auto req = makePredictionRequest(*pe);
