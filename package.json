@@ -2,16 +2,13 @@
   "name": "crashcore",
   "version": "1.0.0",
   "private": true,
-  "scripts": {
-    "dev": "npm run dev --workspace=frontend",
-    "build": "npm run build --workspace=frontend",
-    "start": "npm run start --workspace=frontend",
-    "lint": "npm run lint --workspace=frontend"
-  },
   "workspaces": [
     "frontend"
   ],
-  "dependencies": {
-    "lucide-react": "^1.47.0"
+  "scripts": {
+    "dev": "bun run --filter crashcore-frontend dev",
+    "build": "bun run --filter crashcore-frontend build",
+    "start": "bun run --filter crashcore-frontend start",
+    "lint": "bun run --filter crashcore-frontend lint"
   }
 }
