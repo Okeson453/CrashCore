@@ -1,4 +1,15 @@
 #include "ingestion/websocket/websocket_session.hpp"
+
 namespace crashcore {
-// pumpLoop reads frames and feeds SocketIoClient; reconnect policy is on NativeBcGameSocket.
+
+const char* kWebSocketSessionModule = "crashcore.ingestion.websocket_session";
+
+Result<void> webSocketSessionStart(WebSocketSession& s) {
+  return s.start();
+}
+
+void webSocketSessionStop(WebSocketSession& s) {
+  s.stop();
+}
+
 } // namespace crashcore

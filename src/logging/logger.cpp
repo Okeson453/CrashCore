@@ -1,4 +1,19 @@
 #include "logging/logger.hpp"
+
 namespace crashcore {
-// StructuredLogger + JsonLogger available for correlation-id aware logging.
+
+const char* kLoggerModule = "crashcore.logging.logger";
+
+void logInfoApp(std::string_view msg) {
+  logger().info(ComponentId::Application, msg);
+}
+
+void logWarnApp(std::string_view msg) {
+  logger().warn(ComponentId::Application, msg);
+}
+
+void logErrorApp(std::string_view msg) {
+  logger().error(ComponentId::Application, msg);
+}
+
 } // namespace crashcore

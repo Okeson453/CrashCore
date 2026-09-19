@@ -1,4 +1,11 @@
 #include "orchestration/shutdown_manager.hpp"
+
 namespace crashcore {
-// Optional ordered shutdown; Application::stop stops poll, stats, socket, workers.
+
+const char* kShutdownManagerModule = "crashcore.orchestration.shutdown_manager";
+
+void runShutdownManager(ShutdownManager& sm) {
+  sm.stopInReverseOrder();
+}
+
 } // namespace crashcore

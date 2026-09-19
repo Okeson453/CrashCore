@@ -1,6 +1,19 @@
 #include "ingestion/websocket/websocket_client.hpp"
-#include "ingestion/websocket/beast_connection.hpp"
+
 namespace crashcore {
-// start() -> makeWebSocketConnection(..., useBeast=true) -> Beast TLS + SNI.
-// Query string includes EIO=3&transport=websocket and optional signed p/t.
+
+const char* kWebSocketClientModule = "crashcore.ingestion.websocket_client";
+
+Result<void> webSocketClientStart(WebSocketClient& c) {
+  return c.start();
+}
+
+void webSocketClientStop(WebSocketClient& c) {
+  c.stop();
+}
+
+bool webSocketClientRunning(const WebSocketClient& c) {
+  return c.running();
+}
+
 } // namespace crashcore

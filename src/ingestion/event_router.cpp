@@ -1,5 +1,11 @@
 #include "ingestion/event_router.hpp"
+
 namespace crashcore {
-// LRU dedupe (seen_map_) prevents unbounded growth of seen game ids.
-// Routes Start/Progress to prediction queue, End to validation queue.
+
+const char* kEventRouterModule = "crashcore.ingestion.event_router";
+
+EventRouter::Stats eventRouterStats(const EventRouter& r) {
+  return r.stats();
+}
+
 } // namespace crashcore

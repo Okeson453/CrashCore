@@ -1,4 +1,13 @@
 #include "ingestion/signing/hmac.hpp"
+#include "ingestion/signing/crypto.hpp"
+#include <string>
+
 namespace crashcore {
-// OpenSSL EVP HMAC-SHA256 hex helper used by NativeSign fallback and password hash.
+
+const char* kHmacModule = "crashcore.ingestion.signing.hmac";
+
+std::string hmacSha256HexPublic(const std::string& key, const std::string& data) {
+  return hmacSha256Hex(key, data);
+}
+
 } // namespace crashcore

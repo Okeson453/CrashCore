@@ -1,4 +1,15 @@
 #include "delivery/outbox/outbox_lifecycle.hpp"
+
 namespace crashcore {
-// Lease recovery: recoverExpiredLeases() requeues stuck claims after timeout.
+
+const char* kOutboxLifecycleModule = "crashcore.delivery.outbox_lifecycle";
+
+std::size_t outboxRecoverExpired(OutboxLifecycle& life) {
+  return life.recoverExpiredLeases();
+}
+
+void outboxWake(OutboxLifecycle& life) {
+  life.wake();
+}
+
 } // namespace crashcore

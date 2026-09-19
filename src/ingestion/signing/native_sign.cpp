@@ -1,5 +1,15 @@
 #include "ingestion/signing/native_sign.hpp"
+
 namespace crashcore {
-// setExternalSigner(ExternalSignerClient*) for production wr_utils UDS signing.
-// HMAC fallback is for offline tests only — bc.game rejects non-WASM signatures.
+
+const char* kNativeSignModule = "crashcore.ingestion.signing.native_sign";
+
+SocketSignature nativeSignQuery(NativeSign& sign) {
+  return sign.signSocketQuery();
+}
+
+bool nativeSignReady(const NativeSign& sign) {
+  return sign.isReady();
+}
+
 } // namespace crashcore

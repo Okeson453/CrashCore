@@ -1,4 +1,11 @@
 #include "orchestration/startup_manager.hpp"
+
 namespace crashcore {
-// Optional ordered startup hooks; Application::init is the primary boot path.
+
+const char* kStartupManagerModule = "crashcore.orchestration.startup_manager";
+
+Result<void> runStartupManager(StartupManager& sm) {
+  return sm.startInOrder();
+}
+
 } // namespace crashcore

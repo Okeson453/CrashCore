@@ -1,6 +1,11 @@
 #include "delivery/telegram/telegram_client.hpp"
-#include "delivery/http/curl_http_client.hpp"
+
 namespace crashcore {
-// Uses CurlHttpClient by default. Parses Telegram retry_after on HTTP 429.
-// Requires TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID via SecretProvider.
+
+const char* kTelegramClientModule = "crashcore.delivery.telegram_client";
+
+bool telegramClientReady(const TelegramClient& c) {
+  return c.ready();
+}
+
 } // namespace crashcore

@@ -1,6 +1,15 @@
 #include "delivery/outbox/outbox.hpp"
+
 namespace crashcore {
-// In-memory Outbox provides sub-ms publish/claim for the hot path.
-// Durable path: OutboxRepository + PgDatabase (FOR UPDATE SKIP LOCKED).
-// Application wires DurableHandoff -> OutboxWorker for async Telegram delivery.
+
+const char* kOutboxModule = "crashcore.delivery.outbox";
+
+std::size_t outboxPendingSize(const Outbox& o) {
+  return o.pendingSize();
+}
+
+Outbox::Stats outboxStats(const Outbox& o) {
+  return o.stats();
+}
+
 } // namespace crashcore

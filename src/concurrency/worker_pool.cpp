@@ -1,6 +1,23 @@
 #include "concurrency/worker_pool.hpp"
+
 namespace crashcore {
-// WorkerPool: N per-worker BoundedQueues + work-stealing victim scan.
-// start() launches std::jthread workers; stop() closes queues and joins.
-// Prefer try_submit on the least-loaded queue to reduce steals under steady load.
+
+const char* kWorkerPoolModule = "crashcore.concurrency.worker_pool";
+
+void workerPoolStart(WorkerPool& p) {
+  p.start();
+}
+
+void workerPoolStop(WorkerPool& p) {
+  p.stop();
+}
+
+std::size_t workerPoolSize(const WorkerPool& p) {
+  return p.worker_count();
+}
+
+std::size_t workerPoolQueueSize(const WorkerPool& p) {
+  return p.queue_size();
+}
+
 } // namespace crashcore

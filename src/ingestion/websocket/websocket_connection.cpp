@@ -1,7 +1,13 @@
 #include "ingestion/websocket/websocket_connection.hpp"
 #include "ingestion/websocket/beast_connection.hpp"
+
 namespace crashcore {
-std::unique_ptr<WebSocketConnection> createDefaultWebSocket(WebSocketConfig cfg, WebSocketMetrics* m) {
-  return makeWebSocketConnection(std::move(cfg), m, true);
+
+const char* kWebSocketConnectionModule = "crashcore.ingestion.websocket_connection";
+
+std::unique_ptr<WebSocketConnection> createProductionWebSocket(WebSocketConfig cfg,
+                                                               WebSocketMetrics* metrics) {
+  return makeWebSocketConnection(std::move(cfg), metrics, true);
 }
+
 } // namespace crashcore
