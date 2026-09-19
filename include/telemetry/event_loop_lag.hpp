@@ -48,7 +48,7 @@ public:
 
 private:
   std::int64_t expected_us_;
-  MonotonicClock::TimePoint last_{};
+  MonotonicClock::time_point last_{};
   bool has_last_ = false;
   std::atomic<std::uint64_t> ticks_{0};
   std::int64_t last_lag_us_ = 0;

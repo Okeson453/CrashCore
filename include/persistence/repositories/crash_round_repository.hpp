@@ -4,6 +4,8 @@
 #include "persistence/database.hpp"
 #include "persistence/sql_builder.hpp"
 #include "common/types.hpp"
+#include "ingestion/crash_event.hpp"
+#include "common/errors.hpp"
 #include <vector>
 #include <mutex>
 #include <cstdlib>
@@ -70,6 +72,23 @@ public:
       if (out.size() >= limit) break;
     }
     return out;
+  }
+
+
+  /** Build CrashRound from a validated End event and upsert. */
+  Result<void> upsertFromEvent(const CrashEvent& ev) {
+    if (ev.kind != EventKind::End || !ev.valid) {
+      return Error{ErrorCode::InvalidArgument, "upsertFromEvent requires valid End"};
+    }
+    CrashRound r;
+    r.gameId = !ev.gameId.empty() ? ev.gameId : ev.roundId;
+    r.multiplier = ev.crashPoint > 0 ? ev.crashPoint : ev.currentMult;
+    r.hash = ev.hash;
+    r.hasHash = !r.hash.empty();
+    r.beganAtMs = ev.beganAtMs;
+    r.crashedAtMs = ev.endedAtMs ? ev.endedAtMs : (ev.eventTimeMs ? ev.eventTimeMs : 0);
+    r.sequence = ev.sequence;
+    return upsert(r);
   }
 
   std::uint64_t upsertCount() const noexcept { return upserts_; }
